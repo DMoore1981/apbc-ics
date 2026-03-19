@@ -21,7 +21,7 @@ jobs:
         run: |
           set -e
           curl -fL --retry 3 --retry-delay 5 \
-            "https://raw.githubusercontent.com/DMoore1981/apbc-ics/refs/heads/main/APBC_Production.ics" \
+            "https://raw.githubusercontent.com/DMoore1981/apbc-ics/main/APBC_Production.ics" \
             -o APBC_Production.new.ics
           # quick sanity check; first line should be BEGIN:VCALENDAR
           head -n 1 APBC_Production.new.ics | grep -q "BEGIN:VCALENDAR"
