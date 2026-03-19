@@ -1,0 +1,58 @@
+name: Update APBC ICS
+
+on:
+  # Optional manual test trigger in Actions tab
+  workflow_dispatch:
+    inputs:
+      ics_b64:
+        description: Base64-encoded ICS text (for manual test)
+        required: false
+
+  # Webhook trigger Power Automate will call
+  repository_dispatch:
+    types: [update-ics]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Resolve ICS payload
+        id: resolve
+        shell: bash
+        run: |
+          # Prefer repository_dispatch payload
+          ICS_B64="${{ github.event.client_payload.ics_b64 }}"
+          # Fallback to workflow_dispatch input (manual test)
+          if [ -z "$ICS_B64" ]; then
+            ICS_B64="${{ github.event.inputs.ics_b64 }}"
+          fi
+          if [ -z "$ICS_B64" ]; then
+            echo "No ICS payload provided." >&2
+            exit 1
+          fi
+          echo "ics_b64=$ICS_B64" >> $GITHUB_OUTPUT
+
+      - name: Write APBC_Production.ics
+        shell: bash
+        run: |
+          echo "${{ steps.resolve.outputs.ics_b64 }}" | base64 -d > APBC_Production.ics
+          head -n 1 APBC_Production.ics | grep -q "BEGIN:VCALENDAR" || { echo "Not a valid ICS"; exit 1; }
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git add APBC_Production.ics
+            git commit -m "Automated ICS update"
+            git push
+          fi
