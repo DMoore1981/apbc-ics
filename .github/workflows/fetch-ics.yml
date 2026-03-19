@@ -1,1 +1,45 @@
+name: Fetch latest APBC_Production.ics
 
+on:
+  schedule:
+    # 15:15 UTC ≈ 6:15 AM AKDT / 7:15 AM AKST.
+    # Change the minute & hour to run AFTER your morning Power Automate completes.
+    - cron: "15 15 * * *"
+  workflow_dispatch: {}      # lets you run it manually for testing
+
+permissions:
+  contents: write            # allow push back to the repo (required) 
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download latest ICS
+        run: |
+          set -e
+          curl -fL --retry 3 --retry-delay 5 \
+            "YOUR_PUBLIC_ICS_URL" \
+            -o APBC_Production.new.ics
+          # quick sanity check; first line should be BEGIN:VCALENDAR
+          head -n 1 APBC_Production.new.ics | grep -q "BEGIN:VCALENDAR"
+
+      - name: Commit only if changed
+        shell: bash
+        run: |
+          set -e
+          if [ -f APBC_Production.ics ]; then
+            if cmp -s APBC_Production.new.ics APBC_Production.ics; then
+              echo "No changes detected; skipping commit."
+              exit 0
+            fi
+          fi
+
+          mv APBC_Production.new.ics APBC_Production.ics
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add APBC_Production.ics
+          git commit -m "Update APBC_Production.ics (scheduled)"
+          git push
