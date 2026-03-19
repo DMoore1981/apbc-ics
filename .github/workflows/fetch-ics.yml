@@ -1,13 +1,9 @@
-name: Fetch ICS
+name: Minimal trigger test
 on:
-  schedule:
-    - cron: "15 15 * * *"
   workflow_dispatch:
-permissions:
-  contents: write
+
 jobs:
-  j:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "hello"
+      - run: echo "It works"
